@@ -255,9 +255,13 @@ function setupAudioRecording() {
         }
     };
 
-    const stopRecording = (e) => {
-        if (e && e.cancelable) e.preventDefault();
-        if (!isRecording || !mediaRecorder || mediaRecorder.state === 'inactive') return;
+        const stopRecording = (e) => {
+         if (!isRecording) return;
+         if (e && e.cancelable) e.preventDefault();
+         if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+
+        
+      
         
         mediaRecorder.stop();
         isRecording = false;
