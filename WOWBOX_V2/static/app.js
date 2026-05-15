@@ -222,7 +222,13 @@ function setupAudioRecording() {
         if (isRecording) return;
         
         try {
-                        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    autoGainControl: false,
+                    echoCancellation: false,
+                    noiseSuppression: false
+                } 
+            });
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
             
@@ -255,13 +261,10 @@ function setupAudioRecording() {
         }
     };
 
-        const stopRecording = (e) => {
-         if (!isRecording) return;
-         if (e && e.cancelable) e.preventDefault();
-         if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
-
-        
-      
+    const stopRecording = (e) => {
+        if (!isRecording) return;
+        if (e && e.cancelable) e.preventDefault();
+        if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
         
         mediaRecorder.stop();
         isRecording = false;
@@ -559,37 +562,40 @@ function getTimeAgo(isoString) {
     return `${diffDay}d ago`;
 }
 
-// ─── Heart Burst Effect ─────────────────────────────────────────────────────
-function createHeartBurst() {
-    const container = document.body;
-    const count = 12;
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
-
-    for (let i = 0; i < count; i++) {
-        const heart = document.createElement('div');
-        heart.className = 'heart-particle';
-        heart.innerHTML = `<svg viewBox="0 0 24 24" fill="%23FF6B6B"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
-        
-        // Random trajectory
-        const angle = (Math.PI * 2 / count) * i + (Math.random() * 0.5);
-        const velocity = 5 + Math.random() * 5;
-        const tx = Math.cos(angle) * 150;
-        const ty = Math.sin(angle) * 150 - 100; // Ascend a bit
-
-        heart.style.left = centerX + 'px';
-        heart.style.top = centerY + 'px';
-        heart.style.setProperty('--tx', `${tx}px`);
-        heart.style.setProperty('--ty', `${ty}px`);
-        heart.style.animation = `heartBurst 1s ease-out forwards`;
-
-        container.appendChild(heart);
-        setTimeout(() => heart.remove(), 1000);
-    }
-}
-
 function escapeHTML(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+// ─── Gentle Guidelines Rotation ───────────────────────────────────────────
+function setupGuidelinesRotation() {
+    const guidelineEl = document.getElementById('gentle-guideline');
+    if (!guidelineEl) return;
+    
+    const guidelines = [
+        '"Share the story behind this photo..."',
+        '"Tell them a memory that makes you smile..."',
+        '"Sing a few lines of a favorite song..."',
+        '"Record the sounds of your surroundings..."',
+        '"Just say hello and that you love them..."'
+    ];
+    
+    let currentIndex = 0;
+    
+    setInterval(() => {
+        guidelineEl.style.opacity = '0';
+        setTimeout(() => {
+            currentIndex = (currentIndex + 1) % guidelines.length;
+            guidelineEl.textContent = guidelines[currentIndex];
+            guidelineEl.style.opacity = '1';
+        }, 1000); // Wait for fade out to complete
+    }, 8000); // Rotate every 8 seconds
+}
+
+// Initialize guidelines when DOM is loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupGuidelinesRotation);
+} else {
+    setupGuidelinesRotation();
 }

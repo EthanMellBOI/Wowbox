@@ -4,47 +4,48 @@
 
 /* ─── Design Tokens ─────────────────────────────────────────────────────── */
 :root {
-    /* Background - Warm Cream & Wood */
-    --bg-primary: #FCF9F2;
-    --bg-secondary: #F5EFE6;
-    --bg-tertiary: #E8DFD0;
+    /* Background - Ivory Cream */
+    --bg-primary: #F9F6F0;
+    --bg-secondary: #EFEBE1;
+    --bg-tertiary: #E3DECX;
 
     /* Surfaces - Clean Soft White */
     --surface: #FFFFFF;
-    --surface-hover: #FFF9F9;
-    --surface-active: #FFF0F0;
-    --surface-border: rgba(74, 60, 49, 0.08);
-    --surface-border-light: rgba(74, 60, 49, 0.12);
+    --surface-hover: #FFFDF8;
+    --surface-active: #F5EFE6;
+    --surface-border: rgba(74, 55, 40, 0.08);
+    --surface-border-light: rgba(74, 55, 40, 0.04);
 
-    /* Primary - Heart Red */
-    --primary: #FF6B6B;
-    --primary-light: #FF9E9E;
-    --primary-dark: #EE5253;
-    --primary-glow: rgba(255, 107, 107, 0.2);
-    --primary-bg: rgba(255, 107, 107, 0.08);
+    /* Primary - Deep Walnut Wood */
+    --primary: #4A3728;
+    --primary-light: #5C4533;
+    --primary-dark: #3A2A1D;
+    --primary-glow: rgba(74, 55, 40, 0.15);
+    --primary-bg: rgba(74, 55, 40, 0.05);
 
-    /* Accent - Pink/Peach */
-    --accent: #FFB8B8;
-    --accent-light: #FFD1D1;
+    /* Accent - Warm Amber Glow */
+    --accent: #FFB347;
+    --accent-light: #FFC677;
+    --accent-glow: rgba(255, 179, 71, 0.4);
 
     /* Semantic */
-    --success: #2ECC71;
-    --success-bg: rgba(46, 204, 113, 0.1);
-    --success-border: rgba(46, 204, 113, 0.2);
-    --warning: #F1C40F;
-    --warning-bg: rgba(241, 196, 15, 0.1);
-    --warning-border: rgba(241, 196, 15, 0.2);
-    --error: #FF6B6B;
-    --error-bg: rgba(255, 107, 107, 0.1);
-    --error-border: rgba(255, 107, 107, 0.2);
-    --info: #3498DB;
-    --info-bg: rgba(52, 152, 219, 0.1);
-    --info-border: rgba(52, 152, 219, 0.2);
+    --success: #2E8B57;
+    --success-bg: rgba(46, 139, 87, 0.1);
+    --success-border: rgba(46, 139, 87, 0.2);
+    --warning: #D4AF37;
+    --warning-bg: rgba(212, 175, 55, 0.1);
+    --warning-border: rgba(212, 175, 55, 0.2);
+    --error: #B83227;
+    --error-bg: rgba(184, 50, 39, 0.1);
+    --error-border: rgba(184, 50, 39, 0.2);
+    --info: #217976;
+    --info-bg: rgba(33, 121, 118, 0.1);
+    --info-border: rgba(33, 121, 118, 0.2);
 
-    /* Text - Wood Brown for high readability */
-    --text-primary: #4A3C31;
-    --text-secondary: #8B7361;
-    --text-tertiary: #A69080;
+    /* Text - Espresso for high readability */
+    --text-primary: #2C2117;
+    --text-secondary: #5E4A3D;
+    --text-tertiary: #8B7361;
     --text-inverse: #FFFFFF;
 
     /* Spacing */
@@ -56,20 +57,21 @@
     --space-2xl: 48px;
 
     /* Radii - Softer and more rounded */
-    --radius-sm: 10px;
-    --radius-md: 16px;
-    --radius-lg: 24px;
-    --radius-xl: 32px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
     --radius-full: 9999px;
 
     /* Shadows - Warmer and softer */
-    --shadow-sm: 0 2px 10px rgba(74, 60, 49, 0.08);
-    --shadow-md: 0 8px 30px rgba(74, 60, 49, 0.12);
-    --shadow-lg: 0 12px 50px rgba(74, 60, 49, 0.15);
-    --shadow-glow: 0 0 25px var(--primary-glow);
+    --shadow-sm: 0 2px 8px rgba(44, 33, 23, 0.06);
+    --shadow-md: 0 6px 20px rgba(44, 33, 23, 0.08);
+    --shadow-lg: 0 12px 40px rgba(44, 33, 23, 0.12);
+    --shadow-glow: 0 0 25px var(--accent-glow);
 
-    /* Fonts - Friendly Rounded Font */
-    --font: 'Outfit', 'Inter', -apple-system, sans-serif;
+    /* Fonts - Elegant Serif/Sans mix */
+    --font-heading: 'Lora', 'Merriweather', serif;
+    --font: 'Inter', -apple-system, sans-serif;
 
     /* Transitions */
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -106,37 +108,21 @@ body {
     z-index: 0;
     overflow: hidden;
     pointer-events: none;
+    /* Subtle African-inspired tribal dot pattern in the background */
+    background-image: radial-gradient(var(--surface-border-light) 2px, transparent 2px), radial-gradient(var(--surface-border-light) 2px, transparent 2px);
+    background-size: 60px 60px;
+    background-position: 0 0, 30px 30px;
+    opacity: 0.6;
 }
 
 .heart {
-    position: absolute;
-    width: 100px;
-    height: 100px;
-    background: var(--primary);
-    opacity: 0.15;
-    animation: floating-heart 15s ease-in-out infinite;
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
-    mask-size: contain;
-    -webkit-mask-size: contain;
-    mask-repeat: no-repeat;
-    -webkit-mask-repeat: no-repeat;
-}
-
-.heart-1 { top: 10%; left: 10%; width: 150px; height: 150px; animation-duration: 20s; }
-.heart-2 { bottom: 15%; right: 10%; width: 120px; height: 120px; animation-duration: 18s; animation-delay: -5s; }
-.heart-3 { top: 40%; left: 50%; width: 80px; height: 80px; animation-duration: 25s; animation-delay: -10s; }
-
-@keyframes floating-heart {
-    0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
-    33% { transform: translate(30px, -50px) rotate(10deg) scale(1.1); }
-    66% { transform: translate(-20px, 20px) rotate(-10deg) scale(0.9); }
+    display: none; /* Removed hearts */
 }
 
 /* ─── Paper & Wood Effects ─────────────────────────────────────────────── */
 .glass {
     background: var(--surface);
-    border: 1px solid var(--surface-border);
+    border: 1px solid var(--surface-border-light);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
     position: relative;
@@ -150,16 +136,14 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    height: 8px;
-    background: linear-gradient(to right, #8B4513, #A0522D, #8B4513); /* Wood look */
+    height: 12px;
+    background: linear-gradient(to right, #3A2418, #5C4533, #3A2418); /* Deep African wood look */
     z-index: 10;
 }
 
 .glass-subtle {
-    background: rgba(252, 249, 242, 0.9);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-bottom: 2px solid var(--bg-tertiary);
+    background: var(--surface);
+    border: 1px solid var(--surface-border-light);
 }
 
 /* ─── Screen Management ─────────────────────────────────────────────────── */
@@ -217,34 +201,26 @@ body {
     width: 80px;
     height: 80px;
     border-radius: var(--radius-xl);
-    background: linear-gradient(135deg, var(--primary), var(--accent));
-    color: white;
+    background: var(--primary);
+    color: var(--accent);
     margin-bottom: var(--space-md);
-    box-shadow: var(--shadow-glow);
-    animation: pulse-glow 3s ease-in-out infinite;
-}
-
-@keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 20px var(--primary-glow); }
-    50% { box-shadow: 0 0 40px var(--primary-glow), 0 0 60px rgba(6, 182, 212, 0.15); }
+    box-shadow: var(--shadow-md);
 }
 
 .logo-text {
-    font-size: 2rem;
-    font-weight: 900;
-    letter-spacing: 4px;
-    background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary-light) 50%, var(--accent-light) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    font-size: 2.2rem;
+    font-weight: 800;
+    font-family: var(--font-heading);
+    letter-spacing: 2px;
+    color: var(--primary);
     margin-bottom: var(--space-xs);
 }
 
 .login-subtitle {
     color: var(--text-secondary);
-    font-size: 0.9rem;
-    font-weight: 300;
-    letter-spacing: 2px;
+    font-size: 0.95rem;
+    font-family: var(--font);
+    font-weight: 400;
 }
 
 /* ─── Form Elements ─────────────────────────────────────────────────────── */
