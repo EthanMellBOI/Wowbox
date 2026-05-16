@@ -251,9 +251,9 @@ function setupAudioRecording() {
             
             mediaRecorder.start();
             isRecording = true;
-            recordAudioBtn.style.background = 'rgba(255, 68, 68, 0.4)';
+            recordAudioBtn.style.background = 'var(--accent-light)';
             recordBtnText.textContent = 'Recording... (Release to stop)';
-            recordAudioBtn.classList.add('btn-glow');
+            recordAudioBtn.classList.add('recording-pulse');
             
         } catch (err) {
             console.error("Mic access error", err);
@@ -268,9 +268,9 @@ function setupAudioRecording() {
         
         mediaRecorder.stop();
         isRecording = false;
-        recordAudioBtn.style.background = 'rgba(255,255,255,0.2)';
+        recordAudioBtn.style.background = 'var(--accent)';
         recordBtnText.textContent = 'Hold to Record Voice Message';
-        recordAudioBtn.classList.remove('btn-glow');
+        recordAudioBtn.classList.remove('recording-pulse');
     };
 
     if (recordAudioBtn) {
@@ -314,10 +314,19 @@ async function handleUpload() {
         const data = await res.json();
 
         if (res.ok && data.success) {
-            showToast('Sent with Love! 💖', 'success');
-            createHeartBurst(); // Heart animation!
-            clearPreview();
-            refreshQueue(); // Immediate refresh
+            const overlay = document.getElementById('success-overlay');
+            if (overlay) {
+                overlay.classList.add('active');
+                setTimeout(() => {
+                    overlay.classList.remove('active');
+                    clearPreview();
+                    refreshQueue();
+                }, 3000); // 3 second emotional delay
+            } else {
+                showToast('Sent with Love! 💖', 'success');
+                clearPreview();
+                refreshQueue();
+            }
         } else if (res.status === 401) {
             showToast('Please login again', 'error');
             showLogin();
