@@ -369,6 +369,9 @@ async function refreshQueue() {
 }
 
 function renderQueue(queue) {
+    // 🟢 Filter out cancelled items so they are permanently hidden from the UI
+    queue = queue.filter(item => item.status !== 'cancelled');
+
     if (queue.length === 0) {
         queueList.innerHTML = '';
         queueEmpty.classList.remove('hidden');
