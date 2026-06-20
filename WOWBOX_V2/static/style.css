@@ -1,8 +1,3 @@
-Here is the fully fixed `style.css` file! 
-
-Just click "Copy code" in the top right corner and paste it over your old CSS file on GitHub to bring back your glowing button animation!
-
-```css
 /* ═══════════════════════════════════════════════════════════════════════════
    WOWBOX - Premium Remote Printing Platform
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -12,7 +7,7 @@ Just click "Copy code" in the top right corner and paste it over your old CSS fi
     /* Background - Ivory Cream */
     --bg-primary: #F9F6F0;
     --bg-secondary: #EFEBE1;
-    --bg-tertiary: #E3DECX;
+    --bg-tertiary: #E3DEC0;
 
     /* Surfaces - Clean Soft White */
     --surface: #FFFFFF;
@@ -1098,4 +1093,3 @@ body {
 * {
     -webkit-tap-highlight-color: transparent;
 }
-```
