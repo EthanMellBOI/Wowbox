@@ -676,7 +676,7 @@ function describeBox(d) {
     chips.push({ t: demo ? 'Printer (demo)' : 'Printer',
         s: demo ? 'warn' : pr.reachable === true && !pr.no_paper && !pr.cover_open && !(pr.battery != null && pr.battery < 20) ? 'ok'
             : pr.reachable == null ? 'warn' : 'bad' });
-    const soundBad = sp.available === false;
+    const soundBad = sp.available === false || (d.speaker_confirm && d.speaker_confirm.ok === false);
     const soundWarn = sp.muted || sp.volume === 0;
     chips.push({ t: 'Sound', s: soundBad ? 'bad' : soundWarn ? 'warn' : 'ok' });
 

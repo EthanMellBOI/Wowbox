@@ -91,3 +91,5 @@
 .st-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
 @media (max-width: 480px) { .st-steps li { font-size: 0.66rem; } }
+
+.st-prompt { border: 2px solid var(--accent); background: rgba(255, 179, 71, 0.12); }
