@@ -81,6 +81,14 @@ def init_db():
         )
     ''')
 
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS speaker_confirm (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            ok INTEGER NOT NULL,
+            at TEXT NOT NULL
+        )
+    ''')
+
     # DB migration for audio_filename
     try:
         db.execute('ALTER TABLE print_queue ADD COLUMN audio_filename TEXT')
@@ -349,7 +357,7 @@ def agent_status():
 
 AGENT_ONLINE_SECONDS = 30      # the box counts as "online" if it checked in within this window
 MAX_LOG_ROWS = 1000            # rolling event log size
-ALLOWED_COMMANDS = {'restart_agent', 'test_speaker', 'test_lights', 'check_printer'}
+ALLOWED_COMMANDS = {'restart_agent', 'test_speaker', 'test_lights', 'check_printer', 'volume_up', 'volume_down'}
 
 def _mask(text):
     """Never store the agent key in the event log."""
@@ -452,6 +460,7 @@ def api_status():
         'last_seen': last_seen,
         'status': status,
         'queue': counts,
+        'speaker_confirm': get_speaker_confirm(db),
         'server_time': datetime.utcnow().isoformat()
     })
 
@@ -470,6 +479,29 @@ def api_logs():
             'SELECT * FROM (SELECT * FROM agent_logs ORDER BY id DESC LIMIT ?) ORDER BY id ASC', (limit,)).fetchall()
     return jsonify({'logs': [dict(r) for r in rows]})
 
+def get_speaker_confirm(db):
+    """Did a person confirm they heard the last speaker test? None = not confirmed since the last test."""
+    row = db.execute('SELECT ok, at FROM speaker_confirm WHERE id = 1').fetchone()
+    if not row:
+        return None
+    return {'ok': bool(row['ok']), 'ago_s': int((datetime.utcnow() - datetime.fromisoformat(row['at'])).total_seconds())}
+
+@app.route('/api/speaker-confirm', methods=['POST'])
+@login_required
+def api_speaker_confirm():
+    """The person standing next to the box says whether they heard the test sound.
+    The audio jack gives the Pi no way to detect a switched-off speaker, so this is the real check."""
+    data = request.get_json(silent=True) or {}
+    ok = bool(data.get('ok'))
+    db = get_db()
+    db.execute('INSERT OR REPLACE INTO speaker_confirm (id, ok, at) VALUES (1, ?, ?)',
+               (1 if ok else 0, datetime.utcnow().isoformat()))
+    db.commit()
+    add_log('info' if ok else 'warning',
+            'Speaker test confirmed: the sound was heard' if ok else 'Speaker test: the sound was NOT heard - check the speaker is on and the cable is plugged in',
+            'server')
+    return jsonify({'success': True})
+
 @app.route('/api/command', methods=['POST'])
 @login_required
 def api_command():
@@ -482,13 +514,16 @@ def api_command():
     db = get_db()
     pending = db.execute(
         "SELECT 1 FROM agent_commands WHERE command = ? AND status = 'pending'", (command,)).fetchone()
-    if not pending:
+    if not pending or command.startswith('volume_'):  # every volume tap counts, others are de-duplicated
         db.execute(
             'INSERT INTO agent_commands (command, created_at) VALUES (?, ?)',
             (command, datetime.utcnow().isoformat())
         )
         db.commit()
         add_log('info', f"Remote action requested: {command}", 'server')
+        if command == 'test_speaker':
+            db.execute('DELETE FROM speaker_confirm')  # a new test invalidates the previous answer
+            db.commit()
     return jsonify({'success': True})
 
 @app.errorhandler(413)

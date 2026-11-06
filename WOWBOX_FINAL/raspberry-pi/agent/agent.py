@@ -353,6 +353,23 @@ def test_lights():
         time.sleep(0.6)
     leds.off()
 
+VOLUME_STEP = 0.10
+
+def change_volume(direction):
+    """Raise/lower the box's software volume by 10% (0-100%) and make sure it is not muted."""
+    sink = "@DEFAULT_AUDIO_SINK@"
+    res = subprocess.run(diagnostics.as_audio_user(["wpctl", "get-volume", sink]), capture_output=True, text=True)
+    try:
+        current = float(res.stdout.split()[1])
+    except (IndexError, ValueError):
+        logger.warning("Volume change failed: could not read the current volume")
+        return
+    new = round(min(1.0, max(0.0, current + direction * VOLUME_STEP)), 2)
+    subprocess.run(diagnostics.as_audio_user(["wpctl", "set-mute", sink, "0"]), capture_output=True)
+    subprocess.run(diagnostics.as_audio_user(["wpctl", "set-volume", sink, f"{new:.2f}"]), capture_output=True)
+    diagnostics.invalidate_speaker()
+    logger.info(f"Volume set to {int(round(new * 100))}%")
+
 def run_command(command):
     logger.info(f"Remote action received: {command}")
     if command == "restart_agent":
@@ -361,6 +378,8 @@ def run_command(command):
         subprocess.Popen(["systemctl", "restart", "wowbox-agent.service"], start_new_session=True)
     elif command == "test_speaker":
         threading.Thread(target=test_speaker, daemon=True).start()
+    elif command in ("volume_up", "volume_down"):
+        change_volume(1 if command == "volume_up" else -1)
     elif command == "test_lights":
         threading.Thread(target=test_lights, daemon=True).start()
     elif command == "check_printer":

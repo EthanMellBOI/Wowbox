@@ -146,11 +146,18 @@ function evaluate(data) {
         checks.push({ key: 'speaker', label: 'Speaker output is ready', state: 'warn',
             detail: `Audio output "${sp.sink || 'default'}" is connected but the volume is at 0% - the box will be silent.`,
             hint: 'Raise the box volume (SSH: wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.5). A volume control in this page is a good next step.' });
+    } else if (data.speaker_confirm && data.speaker_confirm.ok === false) {
+        checks.push({ key: 'speaker', label: 'Speaker output is ready', state: 'bad',
+            detail: `You could not hear the last test sound (${ago(data.speaker_confirm.ago_s)}).`,
+            hint: 'Check the speaker is switched ON, charged, the volume is up, and the audio cable is pushed in fully at both ends. Then press "Test speaker" again.' });
+    } else if (data.speaker_confirm && data.speaker_confirm.ok === true) {
+        checks.push({ key: 'speaker', label: 'Speaker output is ready', state: 'unknown',
+            detail: `Sound heard OK ${ago(data.speaker_confirm.ago_s)} - audio output "${sp.sink || 'default'}" at ${sp.volume != null ? sp.volume + '%' : '?'}.` });
     } else if (sp.last_test_ok === false) {
         checks.push({ key: 'speaker', label: 'Speaker output is ready', state: 'bad',
             detail: 'The last speaker test failed.', hint: 'Check the cable and that the speaker is switched on.' });
     } else {
-        checks.push({ key: 'speaker', label: 'Speaker output is ready', state: 'ok',
+        checks.push({ key: 'speaker', label: 'Speaker output is ready', state: 'unknown',
             detail: `Audio output "${sp.sink || 'default'}" at ${sp.volume != null ? sp.volume + '%' : '?'}. ` +
                 (sp.last_test_ago_s != null ? `Last test ${ago(sp.last_test_ago_s)}.` : 'Press "Test speaker" and listen to confirm.') });
     }
@@ -300,6 +307,7 @@ function render(data) {
     renderTodo(checks, sysWarnings);
     renderChecklist(checks);
     renderCards(data, checks);
+    updateVolume(data);
     $('st-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
 }
 
@@ -376,6 +384,7 @@ async function sendCommand(cmd, btn) {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command: cmd })
         });
         toast(res.ok ? 'Sent - the box will do it within ~10 seconds. Watch the activity log.' : 'Could not send the action.');
+        if (res.ok && cmd === 'test_speaker') showSpeakerPrompt();
         setTimeout(pollLogs, 1500);
     } catch (e) { toast('Connection error'); }
     setTimeout(() => { btn.disabled = false; }, 4000);
@@ -397,4 +406,61 @@ document.addEventListener('DOMContentLoaded', () => {
     pollLogs();
     setInterval(pollStatus, STATUS_POLL_MS);
     setInterval(pollLogs, LOG_POLL_MS);
+});
+
+// ─── Speaker confirmation: the audio jack can't tell us if the speaker is on, so ask a human ───
+function showSpeakerPrompt() {
+    const box = $('st-speaker-prompt');
+    box.classList.remove('st-hidden');
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function answerSpeaker(ok) {
+    $('st-speaker-prompt').classList.add('st-hidden');
+    try {
+        await fetch('/api/speaker-confirm', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok })
+        });
+        toast(ok ? 'Great - speaker confirmed.' : 'Noted - check the speaker is on and the cable is plugged in.');
+        pollStatus();
+        setTimeout(pollLogs, 800);
+    } catch (e) { toast('Connection error'); }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    $('st-heard-yes').addEventListener('click', () => answerSpeaker(true));
+    $('st-heard-no').addEventListener('click', () => answerSpeaker(false));
+});
+
+// ─── Volume + / - ─────────────────────────────────────────────────────────────
+let shownVolume = null;      // what the buttons currently display
+let volumeHoldUntil = 0;     // after a tap, ignore older readings from the box until it catches up
+
+function updateVolume(data) {
+    const sp = (data.status || {}).speaker || {};
+    const val = $('st-vol-val');
+    const live = data.online && sp.available;
+    $('st-vol-down').disabled = !live;
+    $('st-vol-up').disabled = !live;
+    if (Date.now() < volumeHoldUntil) { val.textContent = shownVolume + '%'; return; }
+    if (live && sp.volume != null) { shownVolume = sp.volume; val.textContent = sp.volume + '%' + (sp.muted ? ' (muted)' : ''); }
+    else val.textContent = '\u2013';
+}
+
+async function changeVolume(direction) {
+    if (shownVolume == null) return;
+    shownVolume = Math.max(0, Math.min(100, shownVolume + direction * 10));
+    volumeHoldUntil = Date.now() + 15000;
+    $('st-vol-val').textContent = shownVolume + '%';
+    try {
+        await fetch('/api/command', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command: direction > 0 ? 'volume_up' : 'volume_down' })
+        });
+    } catch (e) { toast('Connection error'); }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    $('st-vol-down').addEventListener('click', () => changeVolume(-1));
+    $('st-vol-up').addEventListener('click', () => changeVolume(1));
 });

@@ -91,3 +91,9 @@
 .st-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
 @media (max-width: 480px) { .st-steps li { font-size: 0.66rem; } }
+
+.st-prompt { border: 2px solid var(--accent); background: rgba(255, 179, 71, 0.12); }
+
+.st-vol { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.st-vol-btn { width: 64px; height: 64px; border-radius: 50%; font-size: 1.8rem; line-height: 1; padding: 0; }
+.st-vol-val { min-width: 90px; text-align: center; font-family: 'Outfit', sans-serif; font-size: 1.8rem; font-weight: 700; }
