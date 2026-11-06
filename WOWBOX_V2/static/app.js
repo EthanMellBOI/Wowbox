@@ -69,6 +69,7 @@ function showLogin() {
 }
 
 function showApp() {
+    setTimeout(refreshBoxBadge, 300);
     loginScreen.classList.remove('active');
     appScreen.classList.add('active');
     startQueuePolling();
@@ -315,6 +316,7 @@ async function handleUpload() {
 
         if (res.ok && data.success) {
             const overlay = document.getElementById('success-overlay');
+            selectedFile = null; // prevents a double-tap from sending the same photo twice
             if (overlay) {
                 overlay.classList.add('active');
                 setTimeout(() => {
@@ -418,7 +420,7 @@ function createQueueItemHTML(item) {
             </div>
             <div class="queue-item-info">
                 <div class="queue-item-name">${escapeHTML(item.original_name)}</div>
-                <div class="queue-item-time">${timeAgo}${item.error ? ' • ' + escapeHTML(item.error) : ''}</div>
+                <div class="queue-item-time">${timeAgo}</div>
             </div>
             <div class="queue-item-actions">
                 ${statusBadge}
@@ -440,7 +442,7 @@ function getStatusBadge(status) {
         case 'pending':
             return `<span class="status-badge status-pending">
                 <span class="status-dots"><span></span><span></span><span></span></span>
-                Waiting
+                On its way
             </span>`;
         case 'printing':
             return `<span class="status-badge status-printing">
@@ -460,7 +462,7 @@ function getStatusBadge(status) {
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
-                Failed
+                Couldn't print
             </span>`;
         default:
             return `<span class="status-badge">${status}</span>`;
@@ -620,6 +622,7 @@ async function refreshBoxBadge() {
         const res = await fetch('/api/status');
         if (!res.ok) return; // not logged in yet
         const d = await res.json();
+        renderOverview(d);
         const s = d.status || {};
         const pr = s.printer || {}, sp = s.speaker || {};
         let label, online;
@@ -632,11 +635,106 @@ async function refreshBoxBadge() {
         agentStatus.classList.toggle('offline', !online);
         agentStatus.querySelector('.agent-label').textContent = label;
         agentStatus.title = 'Open box status';
-    } catch (err) { /* silent */ }
+    } catch (err) {
+        const ov = document.getElementById('box-overview');
+        if (ov) {
+            ov.className = 'box-overview unknown';
+            document.getElementById('bo-title').textContent = "Can't reach the app right now";
+            document.getElementById('bo-sub').textContent = 'Check your phone\u2019s internet connection. Trying again\u2026';
+            document.getElementById('bo-chips').innerHTML = '';
+        }
+    }
 }
 if (agentStatus) {
     agentStatus.style.cursor = 'pointer';
     agentStatus.addEventListener('click', () => { window.location.href = '/status'; });
     setInterval(refreshBoxBadge, 5000);
     setTimeout(refreshBoxBadge, 1500);
+}
+
+
+// ─── Box overview card on the main page (plain language for family) ──────────
+function describeBox(d) {
+    const s = d.status || {};
+    const pr = s.printer || {}, sp = s.speaker || {}, net = s.network || {};
+    const chips = [];
+    let state, icon, title, sub;
+
+    if (!d.last_seen) {
+        return { state: 'bad', icon: '!', title: "The WOWBOX hasn't connected yet",
+            sub: 'Make sure it is plugged in and the Wi-Fi (phone hotspot) is on. This can take a minute or two.', chips };
+    }
+    if (!d.online) {
+        return { state: 'bad', icon: '!', title: 'The WOWBOX is offline',
+            sub: 'Check that it is plugged in and the Wi-Fi is on. Photos you send will wait and arrive when it is back.',
+            chips: [{ t: 'Connection', s: 'bad' }] };
+    }
+
+    const demo = !!s.demo_mode;
+    const printerOk = demo || pr.reachable === true;
+    chips.push({ t: 'Connection', s: net.internet === false || net.server_reachable === false ? 'bad' : 'ok' });
+    chips.push({ t: demo ? 'Printer (demo)' : 'Printer',
+        s: demo ? 'warn' : pr.reachable === true && !pr.no_paper && !pr.cover_open && !(pr.battery != null && pr.battery < 20) ? 'ok'
+            : pr.reachable == null ? 'warn' : 'bad' });
+    const soundBad = sp.available === false;
+    const soundWarn = sp.muted || sp.volume === 0;
+    chips.push({ t: 'Sound', s: soundBad ? 'bad' : soundWarn ? 'warn' : 'ok' });
+
+    // Most important message first
+    if (net.internet === false || net.server_reachable === false) {
+        state = 'bad'; icon = '!'; title = 'The WOWBOX has lost its connection';
+        sub = 'Check the Wi-Fi (phone hotspot) and mobile data. It will reconnect on its own.';
+    } else if (!demo && pr.no_paper) {
+        state = 'bad'; icon = '!'; title = 'The printer is out of paper';
+        sub = 'Please put a new pack of photo paper in the printer.';
+    } else if (!demo && pr.cover_open) {
+        state = 'bad'; icon = '!'; title = 'The printer cover is open';
+        sub = 'Please close the paper cover on the printer.';
+    } else if (!demo && pr.reachable === false) {
+        state = 'bad'; icon = '!'; title = "The printer can't be reached";
+        sub = 'Please switch the printer on and keep it close to the WOWBOX.';
+    } else if (soundBad) {
+        state = 'bad'; icon = '!'; title = 'The WOWBOX has no sound';
+        sub = 'Check the speaker cable is plugged in and the speaker is on.';
+    } else if (s.stage === 'printing') {
+        state = 'busy'; icon = '\uD83D\uDDA8'; title = 'Printing the photo\u2026';
+        sub = 'It takes about a minute. The photo will slide out of the printer.';
+    } else if (s.stage === 'waiting_for_button') {
+        state = 'busy'; icon = '\u2665'; title = 'A photo has arrived!';
+        sub = 'The WOWBOX is glowing, waiting for someone to press the button.';
+    } else if (s.stage === 'downloading') {
+        state = 'busy'; icon = '\u2665'; title = 'A photo is arriving\u2026';
+        sub = 'Just a moment.';
+    } else if (s.stage === 'error') {
+        state = 'warn'; icon = '!'; title = "The last photo didn't print";
+        sub = 'Tap for details, then try sending it again.';
+    } else if (soundWarn) {
+        state = 'warn'; icon = '!'; title = 'The WOWBOX sound is turned down';
+        sub = 'The photo will print, but there may be no sound. Tap for details.';
+    } else if (!demo && pr.battery != null && pr.battery < 20) {
+        state = 'warn'; icon = '!'; title = 'The printer battery is low';
+        sub = `Battery is at ${pr.battery}%. Please charge the printer soon.`;
+    } else if (demo) {
+        state = 'warn'; icon = '\u2665'; title = 'Demo mode is on';
+        sub = 'Photos show lights and sound but are not printed.';
+    } else if (pr.reachable == null && !printerOk) {
+        state = 'warn'; icon = '\u2665'; title = 'The WOWBOX is getting ready';
+        sub = 'Checking the printer\u2026';
+    } else {
+        state = 'ok'; icon = '\u2665'; title = 'The WOWBOX is ready';
+        sub = 'Send a photo and it will arrive and print.';
+    }
+    return { state, icon, title, sub, chips };
+}
+
+function renderOverview(d) {
+    const el = document.getElementById('box-overview');
+    if (!el) return;
+    const v = describeBox(d);
+    el.className = 'box-overview ' + v.state;
+    document.getElementById('bo-icon').textContent = v.icon;
+    document.getElementById('bo-title').textContent = v.title;
+    document.getElementById('bo-sub').textContent = v.sub;
+    document.getElementById('bo-chips').innerHTML = v.chips
+        .map(c => `<span class="bo-chip ${c.s}"><i></i>${escapeHTML(c.t)}</span>`).join('');
 }
