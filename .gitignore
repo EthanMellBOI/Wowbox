@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.backup
+
+# Local secrets and per-device config (copy config.py.example -> config.py on the Pi)
+config.py
+.env
+
+# Runtime data - never commit
+*.db
+WOWBOX_V2/uploads/
+uploads/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -611,3 +611,32 @@ if (document.readyState === 'loading') {
 } else {
     setupGuidelinesRotation();
 }
+
+
+// ─── Box status badge (live health, links to /status) ────────────────────────
+async function refreshBoxBadge() {
+    if (!agentStatus) return;
+    try {
+        const res = await fetch('/api/status');
+        if (!res.ok) return; // not logged in yet
+        const d = await res.json();
+        const s = d.status || {};
+        const pr = s.printer || {}, sp = s.speaker || {};
+        let label, online;
+        if (!d.last_seen) { label = 'Box not connected'; online = false; }
+        else if (!d.online) { label = 'Box offline'; online = false; }
+        else if (!s.demo_mode && (pr.reachable === false || pr.no_paper || pr.cover_open)) { label = 'Check printer'; online = false; }
+        else if (sp.available === false) { label = 'Check speaker'; online = false; }
+        else { label = s.stage === 'idle' || !s.stage ? 'Box ready' : 'Box busy'; online = true; }
+        agentStatus.classList.toggle('online', online);
+        agentStatus.classList.toggle('offline', !online);
+        agentStatus.querySelector('.agent-label').textContent = label;
+        agentStatus.title = 'Open box status';
+    } catch (err) { /* silent */ }
+}
+if (agentStatus) {
+    agentStatus.style.cursor = 'pointer';
+    agentStatus.addEventListener('click', () => { window.location.href = '/status'; });
+    setInterval(refreshBoxBadge, 5000);
+    setTimeout(refreshBoxBadge, 1500);
+}
