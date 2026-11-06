@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WOWBOX - Status</title>
+    <meta name="theme-color" content="#FCF9F2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/status.css">
+</head>
+<body class="status-body">
+
+    <header class="st-header">
+        <a href="/" class="st-back" title="Back to the app">&larr; Back</a>
+        <h1>Box Status</h1>
+        <span class="st-updated" id="st-updated">Loading&hellip;</span>
+    </header>
+
+    <main class="st-main">
+
+        <!-- Needs login -->
+        <section id="st-login" class="st-card st-hidden">
+            <h2>Please log in first</h2>
+            <p>The status page is only for family members. <a href="/">Go to the login page</a>, then come back.</p>
+        </section>
+
+        <div id="st-content" class="st-hidden">
+
+            <!-- Overall health -->
+            <section id="st-hero" class="st-hero unknown">
+                <div class="st-hero-icon" id="st-hero-icon">&hellip;</div>
+                <div class="st-hero-text">
+                    <h2 id="st-hero-title">Checking the box&hellip;</h2>
+                    <p id="st-hero-sub"></p>
+                </div>
+            </section>
+
+            <!-- What is it doing right now -->
+            <section class="st-card">
+                <h3>What is happening right now</h3>
+                <ol class="st-steps" id="st-steps">
+                    <li data-step="downloading"><span>1</span>Photo received</li>
+                    <li data-step="waiting_for_button"><span>2</span>Waiting for the button</li>
+                    <li data-step="printing"><span>3</span>Printing</li>
+                    <li data-step="done"><span>&#10003;</span>Done</li>
+                </ol>
+                <p class="st-now" id="st-now">&mdash;</p>
+                <p class="st-queue" id="st-queue"></p>
+            </section>
+
+            <!-- Needs attention -->
+            <section class="st-card st-hidden" id="st-todo-card">
+                <h3>What to check</h3>
+                <ul class="st-todo" id="st-todo"></ul>
+            </section>
+
+            <!-- Setup checklist -->
+            <section class="st-card">
+                <h3>Setup checklist</h3>
+                <p class="st-muted">Everything should be green before you hand the box to someone.</p>
+                <ul class="st-checklist" id="st-checklist"></ul>
+            </section>
+
+            <!-- Detail cards -->
+            <div class="st-grid" id="st-grid"></div>
+
+            <!-- Actions -->
+            <section class="st-card">
+                <h3>Quick actions</h3>
+                <p class="st-muted">The box carries these out within about 10 seconds.</p>
+                <div class="st-actions">
+                    <button class="st-btn" data-cmd="test_speaker">&#128266; Test speaker</button>
+                    <button class="st-btn" data-cmd="test_lights">&#128161; Test lights</button>
+                    <button class="st-btn" data-cmd="check_printer">&#128424; Check printer now</button>
+                    <button class="st-btn st-btn-warn" data-cmd="restart_agent">&#8635; Restart box software</button>
+                </div>
+            </section>
+
+            <!-- Live log -->
+            <section class="st-card">
+                <div class="st-log-head">
+                    <h3>Activity log</h3>
+                    <div class="st-log-tools">
+                        <div class="st-chips" id="st-chips">
+                            <button class="st-chip active" data-level="all">All</button>
+                            <button class="st-chip" data-level="warn">Warnings</button>
+                            <button class="st-chip" data-level="error">Errors</button>
+                        </div>
+                        <button class="st-chip" id="st-copy">Copy</button>
+                    </div>
+                </div>
+                <div class="st-log" id="st-log"><div class="st-log-empty">No activity yet.</div></div>
+            </section>
+
+        </div>
+    </main>
+
+    <div id="st-toast" class="st-toast"></div>
+    <script src="/static/status.js"></script>
+</body>
+</html>

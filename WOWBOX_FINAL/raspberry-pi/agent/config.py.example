@@ -1,4 +1,14 @@
-SERVER_URL = "http://YOUR_SERVER_IP"
-AGENT_KEY = "YOUR_SECRET_KEY_HERE"
-PRINTER_MAC = "XX:XX:XX:XX:XX:XX"
-POLL_INTERVAL = 5
+import os
+
+# The URL of your deployed cloud server
+SERVER_URL = os.environ.get('WOWBOX_SERVER', 'https://wowbox-v2.onrender.com')
+
+# Must match the AGENT_KEY on the server.
+# Normally set in the systemd service file (Environment="AGENT_KEY=...") - do not commit the real key.
+AGENT_KEY = os.environ.get('AGENT_KEY', 'YOUR_SECRET_KEY_HERE')
+
+# Your Canon Ivy 2 printer Bluetooth MAC address
+PRINTER_MAC = os.environ.get('PRINTER_MAC', 'XX:XX:XX:XX:XX:XX')
+
+# How often (seconds) to check the server for new print jobs
+POLL_INTERVAL = int(os.environ.get('POLL_INTERVAL', '5'))

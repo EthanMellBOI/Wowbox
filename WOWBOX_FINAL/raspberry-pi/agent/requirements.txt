@@ -1,3 +1,6 @@
 requests==2.31.0
 loguru==0.6.0
 Pillow==9.5.0
+# Hardware (already installed on the WOWBOX Pi)
+rpi_ws281x
+gpiozero

@@ -1,17 +1,19 @@
 [Unit]
 Description=WOWBOX Remote Printing Agent
-After=network.target bluetooth.target
+After=network-online.target bluetooth.target
+Wants=network-online.target
 
 [Service]
 Environment="PYTHONUNBUFFERED=1"
-Environment="PYTHONUNBUFFERED=1"
-Environment="PYTHONUNBUFFERED=1"
 Type=simple
 User=root
-WorkingDirectory=/home/wowbox_milab/ivy2/
-Environment="WOWBOX_SERVER=https://wowbox.onrender.com"
-Environment="AGENT_KEY=wowbox_secret_key_123!"
-ExecStart=/usr/bin/python3 platform/agent/agent.py
+# Path on the Pi: this folder holds agent.py, config.py, hardware.py, diagnostics.py ...
+WorkingDirectory=/home/wowbox_milab/ivy2/platform/agent
+Environment="WOWBOX_SERVER=https://wowbox-v2.onrender.com"
+# Put the real key here ON THE PI ONLY (sudo nano /etc/systemd/system/wowbox-agent.service).
+# It must match the AGENT_KEY environment variable on Render. Never commit the real key.
+Environment="AGENT_KEY=CHANGE_ME_TO_THE_KEY_FROM_RENDER"
+ExecStart=/usr/bin/python3 /home/wowbox_milab/ivy2/platform/agent/agent.py
 Restart=always
 RestartSec=5
 

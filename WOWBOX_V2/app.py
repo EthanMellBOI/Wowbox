@@ -1,5 +1,6 @@
 import os
 import uuid
+import json
 import time
 import sqlite3
 from datetime import datetime
@@ -54,6 +55,32 @@ def init_db():
         )
     ''')
     
+    # Diagnostics tables: latest agent status, rolling event log, remote commands
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS agent_state (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            data TEXT NOT NULL,
+            last_seen TEXT NOT NULL
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS agent_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts TEXT NOT NULL,
+            level TEXT NOT NULL,
+            source TEXT NOT NULL,
+            message TEXT NOT NULL
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS agent_commands (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            command TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT NOT NULL
+        )
+    ''')
+
     # DB migration for audio_filename
     try:
         db.execute('ALTER TABLE print_queue ADD COLUMN audio_filename TEXT')
@@ -144,6 +171,8 @@ def upload():
             audio_filename = f"{file_id}_audio.{audio_ext}"
             audio_filepath = os.path.join(UPLOAD_FOLDER, audio_filename)
             audio_file.save(audio_filepath)
+
+    add_log('info', f"Photo received from the web app ({file.filename}){' with a voice message' if audio_filename else ''} - queued for printing", 'server')
 
     # Add to print queue
     now = datetime.utcnow().isoformat()
@@ -267,6 +296,8 @@ def agent_next():
     if not item:
         return jsonify({'has_job': False})
 
+    add_log('info', f"WOWBOX picked up job {item['id'][:8]}", 'server')
+
     # Mark as printing
     now = datetime.utcnow().isoformat()
     db.execute(
@@ -298,6 +329,9 @@ def agent_status():
     status = data.get('status')  # 'completed' or 'failed'
     error = data.get('error')
 
+    add_log('info' if status == 'completed' else 'error',
+            f"Print job {str(job_id)[:8]} {status}" + (f": {error}" if error else ''), 'server')
+
     if not job_id or status not in ('completed', 'failed'):
         return jsonify({'error': 'Invalid request'}), 400
 
@@ -311,7 +345,142 @@ def agent_status():
 
     return jsonify({'success': True})
 
-@app.route('/api/agent/heartbeat')
+# ─── Diagnostics: agent status, event log, remote commands ───────────────────
+
+AGENT_ONLINE_SECONDS = 30      # the box counts as "online" if it checked in within this window
+MAX_LOG_ROWS = 1000            # rolling event log size
+ALLOWED_COMMANDS = {'restart_agent', 'test_speaker', 'test_lights', 'check_printer'}
+
+def _mask(text):
+    """Never store the agent key in the event log."""
+    text = str(text)
+    return text.replace(AGENT_KEY, '***') if AGENT_KEY else text
+
+def _trim_logs(db):
+    db.execute('DELETE FROM agent_logs WHERE id <= (SELECT MAX(id) FROM agent_logs) - ?', (MAX_LOG_ROWS,))
+
+def add_log(level, message, source='server'):
+    """Append an event to the rolling log shown on the Status page."""
+    db = get_db()
+    db.execute(
+        'INSERT INTO agent_logs (ts, level, source, message) VALUES (?, ?, ?, ?)',
+        (datetime.utcnow().isoformat(), level, source, _mask(message)[:2000])
+    )
+    _trim_logs(db)
+    db.commit()
+
+@app.route('/status')
+def status_page():
+    return send_from_directory('static', 'status.html')
+
+@app.route('/api/agent/heartbeat', methods=['POST'])
+@agent_required
+def agent_heartbeat_post():
+    """The WOWBOX reports its health + new log lines, and receives queued commands."""
+    data = request.get_json(silent=True) or {}
+    status = data.get('status') or {}
+    now = datetime.utcnow()
+    db = get_db()
+
+    previous = db.execute('SELECT last_seen FROM agent_state WHERE id = 1').fetchone()
+    if previous is None:
+        add_log('info', 'WOWBOX connected to the server for the first time', 'server')
+    else:
+        gap = (now - datetime.fromisoformat(previous['last_seen'])).total_seconds()
+        if gap > AGENT_ONLINE_SECONDS:
+            add_log('info', f"WOWBOX is back online (it was unreachable for {int(gap)}s)", 'server')
+
+    db.execute(
+        'INSERT OR REPLACE INTO agent_state (id, data, last_seen) VALUES (1, ?, ?)',
+        (json.dumps(status), now.isoformat())
+    )
+
+    for entry in (data.get('logs') or [])[:200]:
+        if isinstance(entry, dict):
+            db.execute(
+                'INSERT INTO agent_logs (ts, level, source, message) VALUES (?, ?, ?, ?)',
+                (str(entry.get('ts') or now.isoformat())[:40],
+                 str(entry.get('level') or 'info').lower()[:10],
+                 'box',
+                 _mask(entry.get('message', ''))[:2000])
+            )
+    _trim_logs(db)
+
+    commands = db.execute(
+        "SELECT id, command FROM agent_commands WHERE status = 'pending' ORDER BY id"
+    ).fetchall()
+    for c in commands:
+        db.execute("UPDATE agent_commands SET status = 'sent' WHERE id = ?", (c['id'],))
+    db.commit()
+
+    return jsonify({'ok': True, 'commands': [c['command'] for c in commands]})
+
+@app.route('/api/status')
+@login_required
+def api_status():
+    """Latest box status for the Status page."""
+    db = get_db()
+    row = db.execute('SELECT data, last_seen FROM agent_state WHERE id = 1').fetchone()
+
+    online = False
+    seconds_since = None
+    status = {}
+    last_seen = None
+    if row:
+        status = json.loads(row['data'])
+        last_seen = row['last_seen']
+        seconds_since = int((datetime.utcnow() - datetime.fromisoformat(last_seen)).total_seconds())
+        online = seconds_since <= AGENT_ONLINE_SECONDS
+
+    counts = {r['status']: r['n'] for r in db.execute(
+        'SELECT status, COUNT(*) AS n FROM print_queue GROUP BY status').fetchall()}
+
+    return jsonify({
+        'online': online,
+        'seconds_since_seen': seconds_since,
+        'last_seen': last_seen,
+        'status': status,
+        'queue': counts,
+        'server_time': datetime.utcnow().isoformat()
+    })
+
+@app.route('/api/logs')
+@login_required
+def api_logs():
+    """Rolling event log. ?after=<id> returns only newer lines."""
+    after = request.args.get('after', default=0, type=int)
+    limit = min(request.args.get('limit', default=200, type=int), 500)
+    db = get_db()
+    if after:
+        rows = db.execute(
+            'SELECT * FROM agent_logs WHERE id > ? ORDER BY id ASC LIMIT ?', (after, limit)).fetchall()
+    else:
+        rows = db.execute(
+            'SELECT * FROM (SELECT * FROM agent_logs ORDER BY id DESC LIMIT ?) ORDER BY id ASC', (limit,)).fetchall()
+    return jsonify({'logs': [dict(r) for r in rows]})
+
+@app.route('/api/command', methods=['POST'])
+@login_required
+def api_command():
+    """Queue a remote action for the WOWBOX (it picks it up on its next check-in)."""
+    data = request.get_json(silent=True) or {}
+    command = data.get('command')
+    if command not in ALLOWED_COMMANDS:
+        return jsonify({'error': 'Unknown command'}), 400
+
+    db = get_db()
+    pending = db.execute(
+        "SELECT 1 FROM agent_commands WHERE command = ? AND status = 'pending'", (command,)).fetchone()
+    if not pending:
+        db.execute(
+            'INSERT INTO agent_commands (command, created_at) VALUES (?, ?)',
+            (command, datetime.utcnow().isoformat())
+        )
+        db.commit()
+        add_log('info', f"Remote action requested: {command}", 'server')
+    return jsonify({'success': True})
+
+@app.route('/api/agent/ping')
 @agent_required
 def agent_heartbeat():
     """Agent health check endpoint."""
@@ -323,4 +492,4 @@ def agent_heartbeat():
 # ─── Entry Point ──────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=os.environ.get('FLASK_DEBUG') == '1')
