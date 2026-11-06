@@ -1093,3 +1093,61 @@ body {
 * {
     -webkit-tap-highlight-color: transparent;
 }
+
+
+/* ─── Box Overview (main page status card) ───────────────────────────────── */
+.box-overview {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    border-radius: 18px;
+    border: 1px solid var(--surface-border);
+    background: var(--surface);
+    text-decoration: none;
+    color: var(--text-primary);
+    box-shadow: 0 2px 10px rgba(74, 55, 40, 0.06);
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s var(--ease), box-shadow 0.2s var(--ease);
+}
+.box-overview:active { transform: scale(0.99); }
+.box-overview.ok { background: var(--success-bg); border-color: var(--success-border); }
+.box-overview.warn { background: var(--warning-bg); border-color: var(--warning-border); }
+.box-overview.bad { background: var(--error-bg); border-color: var(--error-border); }
+.box-overview.busy { background: rgba(255, 179, 71, 0.14); border-color: rgba(255, 179, 71, 0.4); }
+.box-overview.unknown { background: var(--surface); }
+
+.bo-icon {
+    width: 46px; height: 46px; flex-shrink: 0;
+    border-radius: 50%; background: #fff;
+    display: grid; place-items: center;
+    font-size: 1.35rem; font-weight: 700;
+    box-shadow: 0 1px 4px rgba(74, 55, 40, 0.1);
+}
+.box-overview.ok .bo-icon { color: var(--success); }
+.box-overview.warn .bo-icon { color: #b8860b; }
+.box-overview.bad .bo-icon { color: var(--error); }
+.box-overview.busy .bo-icon { color: #c77d00; animation: dot-pulse 1.6s ease-in-out infinite; }
+
+.bo-text { flex: 1; min-width: 0; }
+.bo-title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.02rem; line-height: 1.25; }
+.bo-sub { font-size: 0.84rem; color: var(--text-secondary, #6f5f50); margin-top: 2px; line-height: 1.35; }
+.bo-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.bo-chips:empty { display: none; }
+.bo-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 0.72rem; font-weight: 600;
+    padding: 3px 9px; border-radius: 999px;
+    background: rgba(255, 255, 255, 0.8); border: 1px solid var(--surface-border);
+}
+.bo-chip i { width: 7px; height: 7px; border-radius: 50%; background: #b8ad9e; display: inline-block; }
+.bo-chip.ok i { background: var(--success); }
+.bo-chip.warn i { background: var(--warning); }
+.bo-chip.bad i { background: var(--error); }
+.bo-more { font-size: 0.78rem; font-weight: 600; color: var(--primary); white-space: nowrap; align-self: flex-start; padding-top: 2px; }
+
+@media (max-width: 380px) {
+    .bo-more { display: none; }
+    .bo-icon { width: 40px; height: 40px; }
+}

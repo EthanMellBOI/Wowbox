@@ -3,7 +3,7 @@ import uuid
 import json
 import time
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from flask import (
     Flask, request, jsonify, session,
@@ -128,7 +128,7 @@ def login():
         session['authenticated'] = True
         session.permanent = True
         return jsonify({'success': True})
-    return jsonify({'error': 'סיסמה שגויה'}), 401
+    return jsonify({'error': 'Incorrect password'}), 401
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
@@ -145,14 +145,14 @@ def check_auth():
 @login_required
 def upload():
     if 'image' not in request.files:
-        return jsonify({'error': 'לא נבחרה תמונה'}), 400
+        return jsonify({'error': 'No photo selected'}), 400
 
     file = request.files['image']
     if file.filename == '':
-        return jsonify({'error': 'לא נבחר קובץ'}), 400
+        return jsonify({'error': 'No file selected'}), 400
 
     if not allowed_file(file.filename):
-        return jsonify({'error': 'סוג קובץ לא נתמך. השתמש ב-JPG, PNG, GIF, WEBP או HEIC'}), 400
+        return jsonify({'error': 'Unsupported file type. Please use JPG, PNG, GIF, WEBP or HEIC'}), 400
 
     # Generate unique filename
     file_id = str(uuid.uuid4())
@@ -186,7 +186,7 @@ def upload():
     return jsonify({
         'success': True,
         'id': file_id,
-        'message': 'התמונה התקבלה ונוספה לתור ההדפסה'
+        'message': 'Photo received and added to the print queue'
     })
 
 @app.route('/api/queue')
@@ -219,10 +219,10 @@ def cancel_item(item_id):
     item = db.execute('SELECT * FROM print_queue WHERE id = ?', (item_id,)).fetchone()
 
     if not item:
-        return jsonify({'error': 'פריט לא נמצא'}), 404
+        return jsonify({'error': 'Item not found'}), 404
 
     if item['status'] not in ('pending', 'printing'):
-        return jsonify({'error': 'ניתן לבטל רק פריטים בהמתנה או בתהליך'}), 400
+        return jsonify({'error': 'Only waiting or printing photos can be cancelled'}), 400
 
     # Delete files
     filepath = os.path.join(UPLOAD_FOLDER, item['filename'])
@@ -395,6 +395,17 @@ def agent_heartbeat_post():
         (json.dumps(status), now.isoformat())
     )
 
+    # Jobs marked "printing" but the box is idle (e.g. it restarted mid-job) would be stuck forever:
+    # put them back in the queue after a short grace period.
+    if status and not status.get('job_active') and status.get('stage', 'idle') in ('idle', 'error'):
+        cutoff = (now - timedelta(seconds=120)).isoformat()
+        stuck = db.execute(
+            "SELECT id FROM print_queue WHERE status = 'printing' AND updated_at < ?", (cutoff,)).fetchall()
+        for row in stuck:
+            db.execute("UPDATE print_queue SET status = 'pending', updated_at = ? WHERE id = ?",
+                       (now.isoformat(), row['id']))
+            add_log('warning', f"Job {row['id'][:8]} was stuck while the box was idle - put back in the queue", 'server')
+
     for entry in (data.get('logs') or [])[:200]:
         if isinstance(entry, dict):
             db.execute(
@@ -479,6 +490,10 @@ def api_command():
         db.commit()
         add_log('info', f"Remote action requested: {command}", 'server')
     return jsonify({'success': True})
+
+@app.errorhandler(413)
+def too_large(e):
+    return jsonify({'error': 'That file is too large (max 20MB)'}), 413
 
 @app.route('/api/agent/ping')
 @agent_required

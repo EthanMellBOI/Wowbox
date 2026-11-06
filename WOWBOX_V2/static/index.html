@@ -113,6 +113,17 @@
         <!-- Main Content -->
         <main class="app-main">
 
+            <!-- Box Overview: live status at a glance, taps through to /status -->
+            <a id="box-overview" class="box-overview unknown" href="/status" aria-live="polite">
+                <div class="bo-icon" id="bo-icon">&hellip;</div>
+                <div class="bo-text">
+                    <div class="bo-title" id="bo-title">Checking the WOWBOX&hellip;</div>
+                    <div class="bo-sub" id="bo-sub"></div>
+                    <div class="bo-chips" id="bo-chips"></div>
+                </div>
+                <div class="bo-more">Details &rsaquo;</div>
+            </a>
+
             <!-- Activity Banner -->
             <div id="activity-banner" class="activity-banner hidden">
                 <p>Last memory shared by <span id="last-sender-name" class="sender-name"></span> <span id="last-sender-time" class="sender-time"></span></p>
