@@ -290,3 +290,8 @@ def build_status(printer_mac, demo_mode, job_active):
         "system": _system(),
         "last_error": last_error,
     }
+
+
+def invalidate_speaker():
+    """Forget the cached speaker info so the next heartbeat reports the new volume."""
+    _speaker_cache["at"] = 0

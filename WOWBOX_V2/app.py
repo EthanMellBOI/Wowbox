@@ -357,7 +357,7 @@ def agent_status():
 
 AGENT_ONLINE_SECONDS = 30      # the box counts as "online" if it checked in within this window
 MAX_LOG_ROWS = 1000            # rolling event log size
-ALLOWED_COMMANDS = {'restart_agent', 'test_speaker', 'test_lights', 'check_printer'}
+ALLOWED_COMMANDS = {'restart_agent', 'test_speaker', 'test_lights', 'check_printer', 'volume_up', 'volume_down'}
 
 def _mask(text):
     """Never store the agent key in the event log."""
@@ -514,7 +514,7 @@ def api_command():
     db = get_db()
     pending = db.execute(
         "SELECT 1 FROM agent_commands WHERE command = ? AND status = 'pending'", (command,)).fetchone()
-    if not pending:
+    if not pending or command.startswith('volume_'):  # every volume tap counts, others are de-duplicated
         db.execute(
             'INSERT INTO agent_commands (command, created_at) VALUES (?, ?)',
             (command, datetime.utcnow().isoformat())

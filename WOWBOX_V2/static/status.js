@@ -307,6 +307,7 @@ function render(data) {
     renderTodo(checks, sysWarnings);
     renderChecklist(checks);
     renderCards(data, checks);
+    updateVolume(data);
     $('st-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
 }
 
@@ -429,4 +430,37 @@ async function answerSpeaker(ok) {
 document.addEventListener('DOMContentLoaded', () => {
     $('st-heard-yes').addEventListener('click', () => answerSpeaker(true));
     $('st-heard-no').addEventListener('click', () => answerSpeaker(false));
+});
+
+// ─── Volume + / - ─────────────────────────────────────────────────────────────
+let shownVolume = null;      // what the buttons currently display
+let volumeHoldUntil = 0;     // after a tap, ignore older readings from the box until it catches up
+
+function updateVolume(data) {
+    const sp = (data.status || {}).speaker || {};
+    const val = $('st-vol-val');
+    const live = data.online && sp.available;
+    $('st-vol-down').disabled = !live;
+    $('st-vol-up').disabled = !live;
+    if (Date.now() < volumeHoldUntil) { val.textContent = shownVolume + '%'; return; }
+    if (live && sp.volume != null) { shownVolume = sp.volume; val.textContent = sp.volume + '%' + (sp.muted ? ' (muted)' : ''); }
+    else val.textContent = '\u2013';
+}
+
+async function changeVolume(direction) {
+    if (shownVolume == null) return;
+    shownVolume = Math.max(0, Math.min(100, shownVolume + direction * 10));
+    volumeHoldUntil = Date.now() + 15000;
+    $('st-vol-val').textContent = shownVolume + '%';
+    try {
+        await fetch('/api/command', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command: direction > 0 ? 'volume_up' : 'volume_down' })
+        });
+    } catch (e) { toast('Connection error'); }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    $('st-vol-down').addEventListener('click', () => changeVolume(-1));
+    $('st-vol-up').addEventListener('click', () => changeVolume(1));
 });
