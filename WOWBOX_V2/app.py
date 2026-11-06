@@ -425,6 +425,10 @@ def agent_heartbeat_post():
             )
     _trim_logs(db)
 
+    # Remote actions are meant to happen now: drop ones that waited while the box was offline
+    stale = (now - timedelta(seconds=120)).isoformat()
+    db.execute("UPDATE agent_commands SET status = 'expired' WHERE status = 'pending' AND created_at < ?", (stale,))
+
     commands = db.execute(
         "SELECT id, command FROM agent_commands WHERE status = 'pending' ORDER BY id"
     ).fetchall()
